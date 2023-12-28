@@ -7,7 +7,7 @@ members = [
 [package]
 name = "cgi2"
 version = "0.7.0"
-authors = ["Amanda McCann <rory@technomancy.org>"]
+authors = ["Amanda McCann <rory@technomancy.org>", "Jan-Erik Rediger <janerik@fnordig.de>"]
 license = "AGPL-3.0"
 repository = "https://github.com/amandasaurus/rust-cgi"
 description = "Create CGI programmes"

@@ -1,3 +1,9 @@
+== 0.7 (2023-12-28)
+
+* Forked into `cgi2`
+* Updated the `http` dependency
+* Added a function attribute macro `cgi::main`, replacing the declarative macros
+
 == 0.6 (2020-05-27)
 
  * Correctly set charset to utf8 for HTML responses (thanks Unrealrussian)

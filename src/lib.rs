@@ -10,7 +10,7 @@
 //! ```
 //!
 //!
-//! Use the [`cgi::main`](macro.cgi_main.html) macro on your `main` function, taking in a [`Request`] and returning a [`Response`].
+//! Use the [`cgi::main`] macro on your `main` function, taking in a [`Request`] and returning a [`Response`].
 //!
 //! ```rust,no_run
 //! #[cgi::main]
