@@ -1,38 +1,36 @@
 //! Easily create CGI (RFC 3875) programmes in Rust based on hyper's [`http`](https://github.com/hyperium/http) types.
-//! 
+//!
 //! # Installation & Usage
-//! 
+//!
 //! `Cargo.toml`:
-//! 
+//!
 //! ```cargo,ignore
 //! [dependencies]
 //! cgi = "0.3"
 //! ```
-//! 
+//!
 //!
 //! Use the [`cgi_main!`](macro.cgi_main.html) macro, with a function that takes a `cgi::Request` and returns a
 //! `cgi::Response`.
-//! 
+//!
 //! ```rust
-//! extern crate cgi;
-//! 
-//! cgi::cgi_main! { |request: cgi::Request| -> cgi::Response {
+//! #[cgi::main]
+//! fn main(request: cgi::Request) -> cgi::Response {
 //!      cgi::text_response(200, "Hello World")
-//! } }
+//! }
 //! ```
 //!
 //! If your function returns a `Result`, you can use [`cgi_try_main!`](macro.cgi_try_main.html):
 //!
 //! ```rust
-//! extern crate cgi;
-//! 
-//! cgi::cgi_try_main! { |request: cgi::Request| -> Result<cgi::Response, String> {
+//! #[cgi::main]
+//! fn main(request: cgi::Request) -> Result<cgi::Response, String> {
 //!     let greeting = std::fs::read_to_string("greeting.txt").map_err(|_| "Couldn't open file")?;
 //!
 //!     Ok(cgi::text_response(200, greeting))
-//! } }
+//! }
 //! ```
-//! 
+//!
 //! It will parse & extract the CGI environmental variables, and the HTTP request body to create
 //! `Request<u8>`, call your function to create a response, and convert your `Response` into the
 //! correct format and print to stdout. If this programme is not called as CGI (e.g. missing
@@ -41,8 +39,6 @@
 //! It is also possible to call the `cgi::handle` function directly inside your `main` function:
 //!
 //! ```rust,ignore
-//! extern crate cgi;
-//! 
 //! fn main() { cgi::handle(|request: cgi::Request| -> cgi::Response {
 //!      cgi::empty_response(404)
 //! })}
@@ -70,7 +66,7 @@ pub type Response = http::Response<Vec<u8>>;
 /// to create `Request`, and convert your `Response` into the correct format and
 /// print to stdout. If this programme is not called as CGI (e.g. missing required
 /// environmental variables), it will panic.
-pub fn handle<F>(func: F) 
+pub fn handle<F>(func: F)
     where F: FnOnce(Request) -> Response
 {
     let env_vars: HashMap<String, String> = std::env::vars().collect();
@@ -92,60 +88,8 @@ pub fn handle<F>(func: F)
     std::io::stdout().write_all(&output).unwrap();
 }
 
-#[macro_export]
-/// Create a `main` function for a CGI script
-///
-/// Use the `cgi_main` macro, with a function that takes a `cgi::Request` and returns a
-/// `cgi::Response`.
-/// 
-/// ```rust
-/// extern crate cgi;
-/// 
-/// cgi::cgi_main! { |request: cgi::Request| -> cgi::Response {
-///     cgi::empty_response(200)
-/// } }
-/// ```
-macro_rules! cgi_main {
-    ( $func:expr ) => {
-        fn main() {
-            cgi::handle( $func );
-        }
-    };
-}
-
-#[macro_export]
-/// Create a CGI main function based on a function which returns a `Result<cgi::Response, _>`
-///
-/// If the inner function returns an `Ok(...)`, that will be unwrapped & returned. If there's an
-/// error, it will be printed (`{:?}`) to stderr (which apache doesn't sent to the client, but
-/// saves to a log file), and an empty `HTTP 500 Server Error` response is sent instead.
-///
-/// # Example
-///
-/// ```rust
-/// extern crate cgi;
-/// 
-/// cgi::cgi_try_main! { |request: cgi::Request| -> Result<cgi::Response, String> {
-///     let f = std::fs::read_to_string("greeting.txt").map_err(|_| "Couldn't open file")?;
-///
-///     Ok(cgi::text_response(200, f))
-/// } }
-/// ```
-macro_rules! cgi_try_main {
-    ( $func:expr ) => {
-        fn main() {
-            cgi::handle(|request: cgi::Request| {
-                match $func(request) {
-                    Ok(resp) => resp,
-                    Err(err) => {
-                        eprintln!("{:?}", err);
-                        cgi::empty_response(500)
-                    }
-                }
-            })
-        }
-    };
-}
+#[doc(inline)]
+pub use cgi_attributes::main;
 
 pub fn err_to_500<E>(res: Result<Response, E>) -> Response {
     res.unwrap_or(empty_response(500))
@@ -195,7 +139,7 @@ pub fn string_response<T, S>(status_code: T, body: S) -> Response
 ///
 /// ```rust,ignore
 /// extern crate cgi;
-/// 
+///
 /// cgi::cgi_main! { |request: cgi::Request| -> cgi::Response {
 ///   cgi::text_response(200, "Hello world");
 /// } }
@@ -302,7 +246,7 @@ fn parse_request(env_vars: HashMap<String, String>, stdin: Vec<u8>) -> Request {
     req = add_header(req, &env_vars, "SERVER_SOFTWARE", "X-CGI-Server-Software");
 
     req.body(stdin).unwrap()
-    
+
 }
 
 // add the CGI request meta-variables as X-CGI- headers
