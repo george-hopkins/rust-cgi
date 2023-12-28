@@ -1,6 +1,20 @@
 use proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
-use syn::spanned::Spanned;
+use syn::{spanned::Spanned, ReturnType, Type};
+
+fn looks_like_result(return_type: &ReturnType) -> bool {
+    if let ReturnType::Type(_, ty) = return_type {
+        if let Type::Path(p) = &**ty {
+            if let Some(seg) = p.path.segments.last() {
+                if seg.ident == "Result" {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
+}
 
 /// Enables a CGI main function.
 ///
@@ -9,7 +23,7 @@ use syn::spanned::Spanned;
 /// ```ignore
 /// #[cgi::main]
 /// fn main(request: cgi::Request) -> cgi::Response {
-///     Ok(())
+///     todo!()
 /// }
 /// ```
 //#[cfg(not(test))] // NOTE: exporting main breaks tests, we should file an issue.
@@ -36,6 +50,24 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
         });
     }
 
+    let inner = if looks_like_result(ret) {
+        quote! {
+            cgi::handle(|request: cgi::Request| {
+                match inner_main(request) {
+                    Ok(resp) => resp,
+                    Err(err) => {
+                        eprintln!("{:?}", err);
+                        cgi::empty_response(500)
+                    }
+                }
+            })
+        }
+    } else {
+        quote! {
+            cgi::handle(inner_main)
+        }
+    };
+
     let result = quote! {
         #vis fn main() {
             #(#attrs)*
@@ -43,7 +75,7 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
                 #body
             }
 
-            cgi::handle(inner_main);
+            #inner
         }
 
     };
