@@ -6,23 +6,24 @@
 //!
 //! ```cargo,ignore
 //! [dependencies]
-//! cgi = "0.3"
+//! cgi2 = "0.7"
 //! ```
 //!
 //!
-//! Use the [`cgi_main!`](macro.cgi_main.html) macro, with a function that takes a `cgi::Request` and returns a
-//! `cgi::Response`.
+//! Use the [`cgi::main`](macro.cgi_main.html) macro on your `main` function, taking in a [`Request`] and returning a [`Response`].
 //!
-//! ```rust
+//! ```rust,no_run
 //! #[cgi::main]
 //! fn main(request: cgi::Request) -> cgi::Response {
 //!      cgi::text_response(200, "Hello World")
 //! }
 //! ```
 //!
-//! If your function returns a `Result`, you can use [`cgi_try_main!`](macro.cgi_try_main.html):
+//! This also works if you return a `Result`
+//! If your function returns a `Result` the error is printed to `stderr`
+//! and an HTTP 500 error is returned.
 //!
-//! ```rust
+//! ```rust,no_run
 //! #[cgi::main]
 //! fn main(request: cgi::Request) -> Result<cgi::Response, String> {
 //!     let greeting = std::fs::read_to_string("greeting.txt").map_err(|_| "Couldn't open file")?;
@@ -31,20 +32,22 @@
 //! }
 //! ```
 //!
-//! It will parse & extract the CGI environmental variables, and the HTTP request body to create
-//! `Request<u8>`, call your function to create a response, and convert your `Response` into the
+//! It will parse & extract the CGI environmental variables and the HTTP request body to create
+//! an `Request`, call your function to create a response, and convert your `Response` into the
 //! correct format and print to stdout. If this programme is not called as CGI (e.g. missing
 //! required environmental variables), it will panic.
 //!
 //! It is also possible to call the `cgi::handle` function directly inside your `main` function:
 //!
 //! ```rust,ignore
-//! fn main() { cgi::handle(|request: cgi::Request| -> cgi::Response {
-//!      cgi::empty_response(404)
-//! })}
+//! fn main() {
+//!     cgi::handle(|request: cgi::Request| -> cgi::Response {
+//!         cgi::empty_response(404)
+//!     });
+//! }
 //! ```
 //!
-//! Several shortcut functions are provided (such as [`html_response`](fn.html_response.html)/[`binary_response`](fn.binary_response.html))
+//! Several shortcut functions are provided (such as [`html_response`]/[`binary_response`]).
 
 
 use std::io::{Read, Write, stdin};
