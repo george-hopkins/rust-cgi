@@ -200,7 +200,8 @@ pub fn binary_response<'a, T>(status_code: T, content_type: impl Into<Option<&'a
 fn parse_request(env_vars: HashMap<String, String>, stdin: Vec<u8>) -> Request {
     let mut req = http::Request::builder();
 
-    req = req.method(env_vars["REQUEST_METHOD"].as_str());
+    let method = env_vars.get("REQUEST_METHOD").expect("no REQUEST_METHOD set");
+    req = req.method(method.as_str());
     let uri = if env_vars.get("QUERY_STRING").unwrap_or(&"".to_owned()) != "" {
         format!("{}?{}", env_vars["SCRIPT_NAME"], env_vars["QUERY_STRING"])
     } else {
