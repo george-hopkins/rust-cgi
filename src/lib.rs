@@ -205,10 +205,11 @@ fn parse_request(env_vars: HashMap<String, String>, stdin: Vec<u8>) -> Request {
 
     let method = env_vars.get("REQUEST_METHOD").expect("no REQUEST_METHOD set");
     req = req.method(method.as_str());
-    let uri = if env_vars.get("QUERY_STRING").unwrap_or(&"".to_owned()) != "" {
-        format!("{}?{}", env_vars["SCRIPT_NAME"], env_vars["QUERY_STRING"])
-    } else {
-        env_vars["SCRIPT_NAME"].to_owned()
+    let path_info = env_vars.get("PATH_INFO").map(|p| p.as_str()).unwrap_or("");
+    let mut uri = format!("{}{}", env_vars["SCRIPT_NAME"], path_info);
+    let query_string = env_vars.get("QUERY_STRING").map(|p| p.as_str()).unwrap_or("");
+    if query_string != "" {
+        uri.push_str(&format!("?{}", query_string));
     };
     req = req.uri(uri.as_str());
 
