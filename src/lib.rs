@@ -62,6 +62,20 @@ pub type Request = http::Request<Vec<u8>>;
 /// A `Vec<u8>` Response from http
 pub type Response = http::Response<Vec<u8>>;
 
+/// An extension to retrieve the path after the script name (`PATH_INFO`)
+///
+/// ```rust,ignore
+/// request.extensions().get::<cgi::PathInfo>()
+/// ```
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+pub struct PathInfo(pub String);
+
+impl AsRef<str> for PathInfo {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 /// Call a function as a CGI programme.
 ///
 /// This should be called from a `main` function.
@@ -250,8 +264,13 @@ fn parse_request(env_vars: HashMap<String, String>, stdin: Vec<u8>) -> Request {
     req = add_header(req, &env_vars, "SERVER_PROTOCOL", "X-CGI-Server-Protocol");
     req = add_header(req, &env_vars, "SERVER_SOFTWARE", "X-CGI-Server-Software");
 
-    req.body(stdin).unwrap()
+    req = if let Some(path_info) = env_vars.get("PATH_INFO") {
+        req.extension(PathInfo(path_info.into()))
+    } else {
+        req
+    };
 
+    req.body(stdin).unwrap()
 }
 
 // add the CGI request meta-variables as X-CGI- headers
@@ -308,18 +327,25 @@ mod tests {
     #[test]
     fn test_parse_request() {
         let env_vars = env(vec![
-           ("REQUEST_METHOD", "GET"), ("SCRIPT_NAME", "/my/path/script"),
-           ("SERVER_PROTOCOL", "HTTP/1.0"), ("HTTP_USER_AGENT", "MyBrowser/1.0"),
-           ("QUERY_STRING", "foo=bar&baz=bop"),
-           ]);
+            ("REQUEST_METHOD", "GET"),
+            ("SCRIPT_NAME", "/my/path/script"),
+            ("PATH_INFO", "/my/path/info"),
+            ("SERVER_PROTOCOL", "HTTP/1.0"),
+            ("HTTP_USER_AGENT", "MyBrowser/1.0"),
+            ("QUERY_STRING", "foo=bar&baz=bop"),
+        ]);
         let stdin = Vec::new();
         let req = parse_request(env_vars, stdin);
         assert_eq!(req.method(), &http::method::Method::GET);
-        assert_eq!(req.uri(), "/my/path/script?foo=bar&baz=bop");
-        assert_eq!(req.uri().path(), "/my/path/script");
+        assert_eq!(req.uri(), "/my/path/script/my/path/info?foo=bar&baz=bop");
+        assert_eq!(req.uri().path(), "/my/path/script/my/path/info");
         assert_eq!(req.uri().query(), Some("foo=bar&baz=bop"));
         assert_eq!(req.version(), http::version::Version::HTTP_10);
         assert_eq!(req.headers()[http::header::USER_AGENT], "MyBrowser/1.0");
+        assert_eq!(
+            req.extensions().get(),
+            Some(&PathInfo("/my/path/info".into()))
+        );
         assert_eq!(req.body(), &vec![] as &Vec<u8>);
     }
 
